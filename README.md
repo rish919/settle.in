@@ -13,14 +13,32 @@ settle is an Urban Intelligence Platform that helps professionals, families, and
 
 ## Tech Stack
 
-- **Frontend:** React, Vite, React Router, Leaflet (Maps)
-- **Backend:** FastAPI (Python), SQLAlchemy, APScheduler
-- **Database:** PostgreSQL (or SQLite for local development)
-- **APIs:** 
-  - OpenStreetMap Nominatim (Geocoding)
-  - OSRM (Routing / Commutes)
-  - Open-Meteo (Air Quality)
-  - Overpass API (Infrastructure Data Sourcing)
+### Frontend Architecture
+- **React 18:** Component-based UI with custom Hooks.
+- **Vite:** High-performance build tooling and Hot Module Replacement (HMR).
+- **React Router v6:** Client-side routing and layout management.
+- **React-Leaflet:** Interactive geospatial mapping and data visualization.
+- **Custom CSS System:** Pure CSS implementation using Design Tokens and Glassmorphism (zero external UI libraries).
+- **Web Storage API:** State-agnostic user persistence layer via LocalStorage.
+
+### Backend Engineering
+- **Python 3.10+ & FastAPI:** High-performance asynchronous API framework.
+- **SQLAlchemy & Pydantic:** Robust Object-Relational Mapping (ORM) and rigorous data validation.
+- **APScheduler:** Asynchronous background cron jobs for real-time data polling.
+- **Uvicorn:** Lightning-fast ASGI web server.
+- **httpx:** Non-blocking, asynchronous HTTP client for external API aggregation.
+- **Scikit-Learn:** Time-series forecasting and ML pipeline *(Phase 7)*.
+
+### Database & Infrastructure
+- **PostgreSQL 15:** Primary relational database, containerized via Docker.
+- **Docker & Docker Compose:** Infrastructure-as-Code for reliable database provisioning.
+- **SQLite3:** Lightweight fallback for rapid local development.
+
+### Geospatial & Environmental Data Providers
+- **OSRM (Open Source Routing Machine):** Live point-to-point driving durations and route optimization.
+- **OpenStreetMap Nominatim:** Real-time location geocoding and address resolution.
+- **Overpass API:** Extraction of hyper-local infrastructure metrics (hospitals, schools, supermarkets).
+- **Open-Meteo API:** Aggregation of live environmental data and Air Quality Indices (AQI).
 
 ## Project Structure
 
