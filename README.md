@@ -4,12 +4,13 @@ settle is an Urban Intelligence Platform that helps professionals, families, and
 
 ## Features
 
-- **Global Directory:** Browse and filter 120+ neighborhoods across 8 major Indian cities.
-- **AI Matchmaker:** Input your workplace location and preferences (Budget, Safety, Commute, Air Quality) to get dynamically ranked neighborhood recommendations.
-- **Live Commute API:** Integrates with the OpenStreetMap (OSRM) Routing API to instantly compute driving durations from any neighborhood to your specific workplace in traffic.
-- **Granular Livability Metrics:** Neighborhoods are scored using a custom algorithmic weighting of real data (distance to city centers, exact count of hospitals, schools, and supermarkets within a radius).
-- **Compare:** Compare metrics side-by-side for up to 3 cities or neighborhoods.
-- **My settle:** Securely save your favorite neighborhoods and your last-used Matchmaker profile directly to your device.
+- **Algorithmic AI Matchmaker:** Input your workplace coordinates and weighted preferences (Budget, Safety, Commute, AQI) to receive dynamically ranked, personalized neighborhood recommendations.
+- **Time-Series ML Forecasting:** Leverages Scikit-Learn regression models to predict 6-month historical and future trends for neighborhood rental economics and seasonal air quality variations.
+- **Conversational AI Assistant:** Integrated LLM-powered chatbot that parses natural language housing preferences, provides contextual real estate advice, and transparently explains livability scoring.
+- **Live Commute & Routing:** Integrates with the OpenStreetMap (OSRM) Routing API to instantly compute hyper-accurate driving durations from any neighborhood to your specific workplace in traffic.
+- **Granular Livability Scoring:** Neighborhoods are quantitatively scored using a custom algorithmic weighting of live Overpass API data (distance to city hubs, and exact clustering of hospitals, schools, and supermarkets).
+- **Global Directory & Compare Engine:** Browse, filter, and compare 120+ neighborhoods across 8 major Indian cities with side-by-side metric visualizations.
+- **My settle Dashboard:** A state-agnostic persistence layer (via LocalStorage) that securely saves your favorite neighborhoods and your most recent AI Matchmaker parameters directly to your device.
 
 ## Tech Stack
 
