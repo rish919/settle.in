@@ -21,7 +21,3 @@ build/
 .vscode/
 *.swp
 *.swo
-
-# Artifacts
-.agents/
-.gemini/
