@@ -55,6 +55,31 @@ def get_locality(city_id: str, locality_id: str, db: Session = Depends(get_db)):
     return locality
 
 
+@router.get("/cities/{city_id}/localities/{locality_id}/history")
+def get_locality_history(city_id: str, locality_id: str, db: Session = Depends(get_db)):
+    """
+    Get 24 months of historical time-series data for a locality.
+    """
+    history = city_service.get_locality_history(db, locality_id)
+    if not history:
+        raise HTTPException(status_code=404, detail=f"History for Locality '{locality_id}' not found")
+    return history
+
+@router.get("/cities/{city_id}/localities/{locality_id}/forecast")
+def get_locality_forecast(city_id: str, locality_id: str, db: Session = Depends(get_db)):
+    """
+    Get 12 months of future predictions (Rent & AQI) using the ML forecasting engine.
+    """
+    history = city_service.get_locality_history(db, locality_id)
+    if not history or len(history) < 12:
+        return [] # Not enough data to forecast
+        
+    from ml.forecaster import train_and_forecast
+    forecasts = train_and_forecast(history, months_ahead=12)
+    return forecasts
+
+
+
 @router.get("/compare")
 def compare_locations(
     type: str = Query(..., description="Type of comparison: 'city' or 'locality'"),

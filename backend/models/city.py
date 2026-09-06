@@ -10,6 +10,14 @@ from pydantic import BaseModel
 from typing import Optional
 
 
+class HistoricalData(BaseModel):
+    """Represents historical time-series data for a locality."""
+    month_year: str
+    rent: Optional[int] = None
+    aqi: Optional[int] = None
+    crime_rate: Optional[float] = None
+
+
 class Locality(BaseModel):
     """Represents a specific neighborhood/locality within a city."""
 

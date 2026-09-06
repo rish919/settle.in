@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Hero from '../components/Hero';
 import LocationSearchBox from '../components/LocationSearchBox';
-import { fetchRecommendations } from '../api/cityApi';
+import { fetchRecommendations, submitFeedback } from '../api/cityApi';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 const PRESETS = {
@@ -49,6 +49,21 @@ export default function RecommendPage() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [feedbackGiven, setFeedbackGiven] = useState({});
+
+  const handleFeedback = async (localityId, interactionType) => {
+    try {
+      await submitFeedback({
+        locality_id: localityId,
+        interaction_type: interactionType,
+        context_budget: prefs.max_rent,
+        context_commute_weight: prefs.commute_weight
+      });
+      setFeedbackGiven(prev => ({ ...prev, [`${localityId}-${interactionType}`]: true }));
+    } catch (err) {
+      console.error("Failed to submit feedback", err);
+    }
+  };
 
   const handleSliderChange = (e) => {
     const { name, value } = e.target;
@@ -239,7 +254,7 @@ export default function RecommendPage() {
               <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Top Matches For You</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {results.map((loc, idx) => (
-                  <div key={loc.id} className="glass-card animate-fade-in" style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div key={loc.locality_id} className="glass-card animate-fade-in" style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
@@ -250,76 +265,128 @@ export default function RecommendPage() {
                         }}>
                           #{idx + 1}
                         </div>
-                        <h3 style={{ fontSize: '1.25rem', margin: 0 }}>{loc.name}</h3>
+                        <h3 style={{ fontSize: '1.25rem', margin: 0 }}>{loc.locality}</h3>
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', background: 'var(--bg-input)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
                           {loc.city_name}
                         </span>
                         
                         {/* Match Percentage Badge */}
-                        {loc.match_percentage && (
+                        {loc.final_score !== undefined && (
                           <div style={{ 
                             marginLeft: 'auto', 
-                            background: loc.match_percentage >= 80 ? 'var(--success)' : (loc.match_percentage >= 60 ? 'var(--warning)' : 'var(--danger)'),
+                            background: loc.final_score >= 0.80 ? 'var(--success)' : (loc.final_score >= 0.60 ? 'var(--warning)' : 'var(--danger)'),
                             color: 'white',
                             padding: '0.25rem 0.75rem',
                             borderRadius: '12px',
                             fontSize: '0.8rem',
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            gap: '0.5rem',
+                            alignItems: 'center'
                           }}>
-                            {loc.match_percentage}% Match
+                            {Math.round(loc.final_score * 100)}% Match
+                            {loc.ml_suitability && (
+                              <span style={{ opacity: 0.8, fontWeight: 500, fontSize: '0.7rem', borderLeft: '1px solid rgba(255,255,255,0.3)', paddingLeft: '0.5rem' }}>
+                                AI: {Math.round(loc.ml_suitability * 100)}%
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
                       
                       <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                        <div><strong>Rent:</strong> ₹{loc.avg_rent.toLocaleString('en-IN')}</div>
+                        <div><strong>Rent:</strong> ₹{loc.predicted_rent.toLocaleString('en-IN')}</div>
                         <div><strong>Safety:</strong> {loc.safety_score}/10</div>
-                        {loc.estimated_commute_mins ? (
-                          <div style={{ color: 'var(--accent)' }}><strong>Est. Commute:</strong> {loc.estimated_commute_mins} mins</div>
-                        ) : (
-                          <div><strong>Commute:</strong> {loc.commute_score}/10</div>
-                        )}
-                        <div><strong>AQI:</strong> {loc.air_quality_index}</div>
+                        {loc.predicted_commute_minutes ? (
+                          <div style={{ color: 'var(--accent)' }}><strong>Est. Commute:</strong> {loc.predicted_commute_minutes} mins</div>
+                        ) : null}
+                        <div><strong>AQI:</strong> {loc.air_quality_score}</div>
                       </div>
                       
-                      {/* Explanations */}
-                      {loc.explanations && loc.explanations.length > 0 && (
-                        <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'var(--bg-input)', borderRadius: 'var(--radius)', fontSize: '0.85rem' }}>
-                          <strong style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Why it's a match:</strong>
-                          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                            {loc.explanations.map((exp, i) => (
-                              <li key={i} style={{ 
-                                color: exp.startsWith('✓') ? 'var(--success)' : (exp.startsWith('✗') ? 'var(--danger)' : 'var(--text-muted)') 
-                              }}>
-                                {exp}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                      {/* Explanations & Tradeoffs */}
+                      <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexDirection: 'column' }}>
+                        {loc.reasons && loc.reasons.length > 0 && (
+                          <div style={{ padding: '0.75rem', background: 'var(--bg-input)', borderRadius: 'var(--radius)', fontSize: '0.85rem', borderLeft: '3px solid var(--success)' }}>
+                            <strong style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Why it's a match:</strong>
+                            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                              {loc.reasons.map((exp, i) => (
+                                <li key={i} style={{ color: 'var(--success)' }}>✓ {exp}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {loc.tradeoffs && loc.tradeoffs.length > 0 && (
+                          <div style={{ padding: '0.75rem', background: 'var(--bg-input)', borderRadius: 'var(--radius)', fontSize: '0.85rem', borderLeft: '3px solid var(--warning)' }}>
+                            <strong style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Potential Tradeoffs:</strong>
+                            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                              {loc.tradeoffs.map((exp, i) => (
+                                <li key={i} style={{ color: 'var(--warning)' }}>✗ {exp}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {loc.is_anomaly && loc.anomaly_alerts && loc.anomaly_alerts.length > 0 && (
+                          <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: 'var(--radius)', fontSize: '0.85rem', borderLeft: '3px solid var(--danger)' }}>
+                            <strong style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--danger)' }}>⚠️ Data Anomaly Detected:</strong>
+                            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                              {loc.anomaly_alerts.map((alert, i) => (
+                                <li key={i} style={{ color: 'var(--danger)' }}>{alert}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* User Feedback Loop */}
+                      <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Feedback: </span>
+                        
+                        <button 
+                          onClick={() => handleFeedback(loc.locality_id, 'like')}
+                          className="btn-outline"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', opacity: feedbackGiven[`${loc.locality_id}-like`] ? 0.5 : 1 }}
+                          disabled={feedbackGiven[`${loc.locality_id}-like`]}
+                        >👍 Good Fit</button>
+                        
+                        <button 
+                          onClick={() => handleFeedback(loc.locality_id, 'dislike')}
+                          className="btn-outline"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', opacity: feedbackGiven[`${loc.locality_id}-dislike`] ? 0.5 : 1 }}
+                          disabled={feedbackGiven[`${loc.locality_id}-dislike`]}
+                        >👎 Not Interested</button>
+
+                        <button 
+                          onClick={() => handleFeedback(loc.locality_id, 'too_expensive')}
+                          className="btn-outline"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', opacity: feedbackGiven[`${loc.locality_id}-too_expensive`] ? 0.5 : 1 }}
+                          disabled={feedbackGiven[`${loc.locality_id}-too_expensive`]}
+                        >💰 Too Expensive</button>
+
+                      </div>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center', marginLeft: '1rem' }}>
                       <button 
                         onClick={() => {
-                          const isSaved = savedLocalities.some(s => s.id === loc.id);
+                          const isSaved = savedLocalities.some(s => s.id === loc.locality_id);
                           if (isSaved) {
-                            setSavedLocalities(prev => prev.filter(s => s.id !== loc.id));
+                            setSavedLocalities(prev => prev.filter(s => s.id !== loc.locality_id));
                           } else {
-                            setSavedLocalities(prev => [...prev, loc]);
+                            setSavedLocalities(prev => [...prev, { ...loc, id: loc.locality_id, name: loc.locality, avg_rent: loc.predicted_rent }]);
+                            handleFeedback(loc.locality_id, 'save');
                           }
                         }}
                         style={{ 
                           background: 'none', border: 'none', cursor: 'pointer', 
-                          fontSize: '1.5rem', color: savedLocalities.some(s => s.id === loc.id) ? 'var(--accent)' : 'var(--text-muted)',
+                          fontSize: '1.5rem', color: savedLocalities.some(s => s.id === loc.locality_id) ? 'var(--accent)' : 'var(--text-muted)',
                           padding: '0.5rem'
                         }}
-                        title={savedLocalities.some(s => s.id === loc.id) ? "Remove from saved" : "Save to My settle"}
+                        title={savedLocalities.some(s => s.id === loc.locality_id) ? "Remove from saved" : "Save to My settle"}
                       >
-                        {savedLocalities.some(s => s.id === loc.id) ? 'Saved' : 'Save'}
+                        {savedLocalities.some(s => s.id === loc.locality_id) ? 'Saved' : 'Save'}
                       </button>
                       <button 
-                        onClick={() => navigate(`/city/${loc.city_id}/locality/${loc.id}`)}
+                        onClick={() => navigate(`/city/${loc.city_id}/locality/${loc.locality_id}`)}
                         className="btn-primary"
                         style={{ padding: '0.5rem 1rem' }}
                       >

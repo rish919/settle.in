@@ -7,8 +7,8 @@ Now uses PostgreSQL (via SQLAlchemy) instead of mock data.
 
 from typing import Optional
 from sqlalchemy.orm import Session
-from models.db_models import CityDB, LocalityDB, AmenityDB
-from models.city import City, Locality
+from models.db_models import CityDB, LocalityDB, AmenityDB, HistoricalDataDB
+from models.city import City, Locality, HistoricalData
 
 
 def get_all_cities(
@@ -167,3 +167,23 @@ def get_locality_by_id(db: Session, city_id: str, locality_id: str) -> Optional[
         city_id=city_id,
         city_name=loc_db.city.name if loc_db.city else "Unknown"
     )
+
+def get_locality_history(db: Session, locality_id: str) -> list[HistoricalData]:
+    """
+    Get 24 months of historical data for a locality, sorted chronologically.
+    """
+    hist_db = (
+        db.query(HistoricalDataDB)
+        .filter(HistoricalDataDB.locality_id == locality_id)
+        .order_by(HistoricalDataDB.month_year.asc())
+        .all()
+    )
+    
+    return [
+        HistoricalData(
+            month_year=h.month_year,
+            rent=h.rent,
+            aqi=h.aqi,
+            crime_rate=h.crime_rate
+        ) for h in hist_db
+    ]

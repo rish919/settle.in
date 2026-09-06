@@ -36,6 +36,20 @@ class LocalityDB(Base):
 
     city = relationship("CityDB", back_populates="localities")
     amenities = relationship("AmenityDB", back_populates="locality", cascade="all, delete-orphan")
+    historical_data = relationship("HistoricalDataDB", back_populates="locality", cascade="all, delete-orphan", order_by="HistoricalDataDB.month_year")
+
+
+class HistoricalDataDB(Base):
+    __tablename__ = "historical_data"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    locality_id = Column(String, ForeignKey("localities.id"))
+    month_year = Column(String, index=True) # format: "YYYY-MM"
+    rent = Column(Integer, nullable=True)
+    aqi = Column(Integer, nullable=True)
+    crime_rate = Column(Float, nullable=True)
+
+    locality = relationship("LocalityDB", back_populates="historical_data")
 
 
 class AmenityDB(Base):
@@ -49,3 +63,19 @@ class AmenityDB(Base):
     lng = Column(Float)
 
     locality = relationship("LocalityDB", back_populates="amenities")
+
+class UserInteractionDB(Base):
+    __tablename__ = "user_interactions"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    session_id = Column(String, index=True) # Anonymous session ID or user ID
+    locality_id = Column(String, ForeignKey("localities.id"))
+    interaction_type = Column(String) # 'like', 'dislike', 'save', 'too_expensive', 'too_far'
+    timestamp = Column(String) # ISO format timestamp
+    
+    # We store the context in which the interaction was made to use for ML later
+    context_budget = Column(Integer, nullable=True)
+    context_commute_weight = Column(Float, nullable=True)
+    
+    locality = relationship("LocalityDB")
+

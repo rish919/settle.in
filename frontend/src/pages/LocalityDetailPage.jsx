@@ -3,10 +3,11 @@
  */
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { fetchLocalityById } from '../api/cityApi';
+import { fetchLocalityById, fetchLocalityHistory } from '../api/cityApi';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import CostOfLivingCalculator from '../components/CostOfLivingCalculator';
+import HistoricalTrendsChart from '../components/HistoricalTrendsChart';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -55,6 +56,7 @@ const ICONS = {
 export default function LocalityDetailPage() {
   const { cityId, localityId } = useParams();
   const [locality, setLocality] = useState(null);
+  const [historyData, setHistoryData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeFilters, setActiveFilters] = useState(new Set(['hospitals', 'schools', 'supermarkets', 'parks']));
@@ -79,6 +81,30 @@ export default function LocalityDetailPage() {
       try {
         const data = await fetchLocalityById(cityId, localityId);
         setLocality(data);
+        const histData = await fetchLocalityHistory(cityId, localityId);
+        
+        let forecastData = [];
+        try {
+          const { fetchLocalityForecast } = await import('../api/cityApi');
+          forecastData = await fetchLocalityForecast(cityId, localityId);
+        } catch (e) {
+          console.warn("Forecast data not available", e);
+        }
+        
+        // Merge history and forecast
+        // We'll add an `is_forecast` flag so the chart knows how to render it
+        const merged = [
+          ...histData.map(d => ({ ...d, is_forecast: false })),
+          ...forecastData.map(d => ({ 
+            month_year: d.month_year, 
+            rent: d.forecast_rent, 
+            aqi: d.forecast_aqi,
+            crime_rate: null, // we don't forecast crime yet
+            is_forecast: true 
+          }))
+        ];
+        
+        setHistoryData(merged);
       } catch (err) {
         setError('Locality not found or API unavailable.');
         console.error(err);
@@ -118,7 +144,7 @@ export default function LocalityDetailPage() {
           <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0 }}>
             {locality.name}
           </h1>
-          <button 
+          <button
             onClick={() => {
               const isSaved = savedLocalities.some(s => s.id === locality.id);
               if (isSaved) {
@@ -127,8 +153,8 @@ export default function LocalityDetailPage() {
                 setSavedLocalities(prev => [...prev, locality]);
               }
             }}
-            style={{ 
-              background: 'none', border: 'none', cursor: 'pointer', 
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
               fontSize: '1.75rem', color: savedLocalities.some(s => s.id === locality.id) ? 'var(--accent)' : 'var(--text-muted)',
               display: 'flex', alignItems: 'center'
             }}
@@ -146,7 +172,7 @@ export default function LocalityDetailPage() {
           {[
             { label: 'Safety Score', value: locality.safety_score ? `${locality.safety_score}/10` : 'N/A' },
             { label: 'Air Quality Index', value: locality.air_quality_index ?? 'N/A' },
-            { label: 'Average Rent', value: locality.avg_rent ? `₹${locality.avg_rent.toLocaleString('en-IN')}` : 'N/A' },
+            { label: 'Average Rent (1BHK)', value: locality.avg_rent ? `₹${locality.avg_rent.toLocaleString('en-IN')}` : 'N/A' },
             { label: 'Commute Score', value: locality.commute_score ? `${locality.commute_score}/10` : 'N/A' },
             { label: 'Cost of Living', value: locality.cost_of_living_index ? `${locality.cost_of_living_index}/10` : 'N/A' },
             { label: 'Healthcare', value: locality.healthcare_score ? `${locality.healthcare_score}/10` : 'N/A' },
@@ -165,13 +191,13 @@ export default function LocalityDetailPage() {
         {locality.nearby_services && (
           <div style={{ marginTop: '4rem' }}>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Nearby Services</h2>
-            
+
             <div style={{ display: 'grid', gridTemplateColumns: '7fr 3fr', gap: '2rem', alignItems: 'start' }}>
               {/* Map */}
               <div style={{ height: '500px', width: '100%', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                <MapContainer 
-                  center={[locality.lat, locality.lng]} 
-                  zoom={15} 
+                <MapContainer
+                  center={[locality.lat, locality.lng]}
+                  zoom={15}
                   style={{ height: '100%', width: '100%' }}
                   scrollWheelZoom={false}
                 >
@@ -179,9 +205,9 @@ export default function LocalityDetailPage() {
                     url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
                     attribution='&copy; <a href="https://www.stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   />
-                  
+
                   {/* Locality Center Marker */}
-                  <Marker 
+                  <Marker
                     position={[locality.lat, locality.lng]}
                     icon={centerIcon}
                   >
@@ -191,13 +217,13 @@ export default function LocalityDetailPage() {
                   {/* Services Markers — only show active filter categories */}
                   {Object.entries(locality.nearby_services).map(([category, items]) => (
                     activeFilters.has(category) && items.map((item, idx) => (
-                      <Marker 
-                        key={`${category}-${idx}`} 
+                      <Marker
+                        key={`${category}-${idx}`}
                         position={[item.lat, item.lng]}
                         icon={ICONS[category]}
                       >
                         <Popup>
-                          <strong style={{ color: '#000' }}>{item.name}</strong><br/>
+                          <strong style={{ color: '#000' }}>{item.name}</strong><br />
                           <span style={{ textTransform: 'capitalize', color: '#666', fontSize: '0.8rem' }}>{category}</span>
                         </Popup>
                       </Marker>
@@ -212,15 +238,15 @@ export default function LocalityDetailPage() {
                   <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Directory</h3>
                   <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Click a category to toggle it on the map</p>
                 </div>
-                
+
                 <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                   {Object.entries(locality.nearby_services).map(([category, items]) => {
                     const isActive = activeFilters.has(category);
                     return (
                       <div key={category}>
-                        <button 
+                        <button
                           onClick={() => toggleFilter(category)}
-                          style={{ 
+                          style={{
                             background: isActive ? `${CATEGORY_COLORS[category]}18` : 'transparent',
                             border: `1.5px solid ${isActive ? CATEGORY_COLORS[category] : 'var(--border)'}`,
                             borderRadius: '8px',
@@ -235,14 +261,14 @@ export default function LocalityDetailPage() {
                             opacity: isActive ? 1 : 0.5,
                           }}
                         >
-                          <span style={{ 
-                            width: '10px', height: '10px', borderRadius: '50%', 
+                          <span style={{
+                            width: '10px', height: '10px', borderRadius: '50%',
                             backgroundColor: CATEGORY_COLORS[category],
                             flexShrink: 0
                           }}></span>
-                          <span style={{ 
-                            fontSize: '0.85rem', 
-                            textTransform: 'uppercase', 
+                          <span style={{
+                            fontSize: '0.85rem',
+                            textTransform: 'uppercase',
                             letterSpacing: '1px',
                             color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
                             fontWeight: 600,
@@ -258,7 +284,7 @@ export default function LocalityDetailPage() {
                             {items.length}
                           </span>
                         </button>
-                        
+
                         {isActive && items.length > 0 && (
                           <ul style={{ listStyle: 'none', padding: '0 0 0 0.5rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                             {items.map((item, idx) => (
@@ -283,6 +309,11 @@ export default function LocalityDetailPage() {
 
         {/* Cost of Living Calculator */}
         <CostOfLivingCalculator locality={locality} />
+
+        {/* Historical Time-Series Trends */}
+        {historyData && historyData.length > 0 && (
+          <HistoricalTrendsChart data={historyData} />
+        )}
 
       </div>
     </section>

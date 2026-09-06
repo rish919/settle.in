@@ -49,7 +49,7 @@ async def fetch_driving_duration(lat1, lng1, lat2, lng2) -> float:
         logger.error(f"Failed to fetch routing data: {e}")
     
     # Fallback to straight-line distance approximation (roughly 1km = 3 mins in city traffic)
-    from calculate_safety_scores import haversine
+    from scripts.calculate_safety_scores import haversine
     dist_km = haversine(lat1, lng1, lat2, lng2)
     return dist_km * 3.0
 

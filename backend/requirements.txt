@@ -6,3 +6,6 @@ requests
 
 apscheduler
 httpx
+scikit-learn
+pandas
+numpy

@@ -7,6 +7,7 @@ Manages background tasks like daily AQI updates using APScheduler.
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 import logging
+import asyncio
 from database import SessionLocal
 from models.db_models import LocalityDB
 from services.environmental_service import fetch_current_aqi
@@ -24,8 +25,17 @@ async def update_all_aqi():
         localities = db.query(LocalityDB).all()
         updated_count = 0
         
-        for loc in localities:
-            aqi = await fetch_current_aqi(loc.lat, loc.lng)
+        sem = asyncio.Semaphore(20) # Max 20 concurrent requests
+        
+        async def fetch_and_update(loc):
+            async with sem:
+                aqi = await fetch_current_aqi(loc.lat, loc.lng)
+                return loc, aqi
+                
+        tasks = [fetch_and_update(loc) for loc in localities]
+        results = await asyncio.gather(*tasks)
+        
+        for loc, aqi in results:
             if aqi is not None:
                 loc.air_quality_index = aqi
                 updated_count += 1

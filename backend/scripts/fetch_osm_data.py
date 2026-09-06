@@ -8,7 +8,8 @@ import uuid
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import engine, SessionLocal
-from models.db_models import CityDB, LocalityDB, AmenityDB
+from models.db_models import CityDB, LocalityDB, AmenityDB, HistoricalDataDB
+import datetime
 
 OVERPASS_URL = "http://overpass-api.de/api/interpreter"
 
@@ -158,8 +159,39 @@ def run_etl(city_name: str):
                     )
                     db.add(amenity_db)
                     
+            # Generate Historical Data (Past 24 months)
+            now = datetime.datetime.now()
+            for h_idx in range(24):
+                m = now.month - h_idx
+                y = now.year
+                while m <= 0:
+                    m += 12
+                    y -= 1
+                month_str = f"{y}-{m:02d}"
+                
+                # Rent goes up over time, so past rent is slightly lower
+                rent_val = int(locality_db.avg_rent * (1 - (h_idx * 0.005)) + random.randint(-500, 500))
+                
+                # AQI varies seasonally (worse in winter months Nov-Jan)
+                is_winter = m in [11, 12, 1]
+                aqi_val = locality_db.air_quality_index + random.randint(-10, 10)
+                if is_winter:
+                    aqi_val += random.randint(20, 50)
+                    
+                # Crime/Safety fluctuates slightly
+                crime_val = max(1.0, min(10.0, locality_db.safety_score + random.uniform(-0.5, 0.5)))
+                
+                hist_db = HistoricalDataDB(
+                    locality_id=loc_id,
+                    month_year=month_str,
+                    rent=rent_val,
+                    aqi=max(1, aqi_val),
+                    crime_rate=round(crime_val, 1)
+                )
+                db.add(hist_db)
+                
             # Rate limiting delay
-            time.sleep(5.0)
+            time.sleep(1.0)
             
         db.commit()
         print(f" ETL Complete! {city.name} is now populated with real OSM data.")

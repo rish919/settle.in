@@ -7,7 +7,7 @@ Run with: uvicorn main:app --reload
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import cities, health, recommend
+
 
 from contextlib import asynccontextmanager
 from scheduler import start_scheduler, shutdown_scheduler
@@ -38,10 +38,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from api.routes import cities, health, recommend, alerts
+
 # --- Register routers ---
 app.include_router(health.router, prefix="/api", tags=["Health"])
 app.include_router(cities.router, prefix="/api", tags=["Cities"])
 app.include_router(recommend.router, prefix="/api/recommend", tags=["Recommendations"])
+app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
 
 
 # --- Root endpoint ---

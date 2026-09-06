@@ -33,6 +33,7 @@ const defaultIcon = createCustomIcon('var(--accent)');
 const goodIcon = createCustomIcon('var(--success)');
 const moderateIcon = createCustomIcon('var(--warning)');
 const poorIcon = createCustomIcon('var(--danger)');
+const severeIcon = createCustomIcon('#991b1b');
 
 export default function CityDetailPage() {
   const { cityId } = useParams();
@@ -50,7 +51,8 @@ export default function CityDetailPage() {
       if (!val) return defaultIcon;
       if (val <= 50) return goodIcon;
       if (val <= 100) return moderateIcon;
-      return poorIcon;
+      if (val <= 200) return poorIcon;
+      return severeIcon;
     }
     
     if (mapMetric === 'safety_score') {
@@ -119,7 +121,7 @@ export default function CityDetailPage() {
           {[
             { label: 'Safety Score', value: city.safety_score ? `${city.safety_score}/10` : 'N/A' },
             { label: 'Air Quality Index', value: city.air_quality_index ?? 'N/A' },
-            { label: 'Average Rent', value: city.avg_rent ? `₹${city.avg_rent.toLocaleString('en-IN')}` : 'N/A' },
+            { label: 'Average Rent (1BHK)', value: city.avg_rent ? `₹${city.avg_rent.toLocaleString('en-IN')}` : 'N/A' },
             { label: 'Commute Score', value: city.commute_score ? `${city.commute_score}/10` : 'N/A' },
             { label: 'Cost of Living', value: city.cost_of_living_index ? `${city.cost_of_living_index}/10` : 'N/A' },
             { label: 'Healthcare', value: city.healthcare_score ? `${city.healthcare_score}/10` : 'N/A' },
@@ -144,7 +146,8 @@ export default function CityDetailPage() {
               {city.localities.map((locality, i) => {
                 const aqiBadge = locality.air_quality_index <= 50 ? { label: 'Good', className: 'badge-good' } :
                                  locality.air_quality_index <= 100 ? { label: 'Moderate', className: 'badge-moderate' } :
-                                 { label: 'Poor', className: 'badge-poor' };
+                                 locality.air_quality_index <= 200 ? { label: 'Poor', className: 'badge-poor' } :
+                                 { label: 'Severe', className: 'badge-severe' };
                 const staggerClass = i < 8 ? `stagger-${i + 1}` : '';
                 
                 return (
@@ -174,7 +177,7 @@ export default function CityDetailPage() {
                       )}
                       {locality.avg_rent != null && (
                         <div className="stat-item">
-                          <div className="stat-label">Avg Rent</div>
+                          <div className="stat-label">Avg Rent (1BHK)</div>
                           <div className="stat-value">₹{locality.avg_rent.toLocaleString('en-IN')}</div>
                         </div>
                       )}
@@ -272,8 +275,14 @@ export default function CityDetailPage() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                   <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--danger)' }}></div>
-                  {mapMetric === 'safety_score' ? 'Low Safety (<6)' : 'Poor AQI (>100)'}
+                  {mapMetric === 'safety_score' ? 'Low Safety (<6)' : 'Poor AQI (101-200)'}
                 </div>
+                {mapMetric === 'air_quality_index' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#991b1b' }}></div>
+                    {'Severe AQI (>200)'}
+                  </div>
+                )}
               </div>
             )}
           </div>

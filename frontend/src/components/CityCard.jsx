@@ -9,7 +9,8 @@ import { Link } from 'react-router-dom';
 function getAqiBadge(aqi) {
   if (aqi <= 50) return { label: 'Good', className: 'badge-good' };
   if (aqi <= 100) return { label: 'Moderate', className: 'badge-moderate' };
-  return { label: 'Poor', className: 'badge-poor' };
+  if (aqi <= 200) return { label: 'Poor', className: 'badge-poor' };
+  return { label: 'Severe', className: 'badge-severe' };
 }
 
 export default function CityCard({ city, index }) {
@@ -46,7 +47,7 @@ export default function CityCard({ city, index }) {
         )}
         {city.avg_rent != null && (
           <div className="stat-item">
-            <div className="stat-label">Avg Rent</div>
+            <div className="stat-label">Avg Rent (1BHK)</div>
             <div className="stat-value">₹{city.avg_rent.toLocaleString('en-IN')}</div>
           </div>
         )}

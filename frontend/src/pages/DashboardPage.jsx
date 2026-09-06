@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useAlerts } from '../context/AlertContext';
 import Hero from '../components/Hero';
 
 export default function DashboardPage() {
   const [savedLocalities, setSavedLocalities] = useLocalStorage('settle_saved_localities', []);
   const [prefs] = useLocalStorage('settle_preferences', null);
+  const { alertHistory, clearAlertHistory } = useAlerts();
 
   const removeLocality = (id) => {
     setSavedLocalities(prev => prev.filter(loc => loc.id !== id));
@@ -54,6 +56,39 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* Smart Alerts */}
+        {alertHistory && alertHistory.length > 0 && (
+          <div style={{ marginBottom: '4rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Smart Alerts History</h2>
+              <button onClick={clearAlertHistory} className="btn-outline" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }}>Clear All</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {alertHistory.map((alert, idx) => {
+                const isCritical = alert.severity === 'critical';
+                return (
+                  <div key={idx} className="glass-card" style={{ padding: '1rem', borderLeft: `4px solid ${isCritical ? 'var(--danger)' : 'var(--warning)'}` }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                      <div style={{ fontSize: '1.5rem' }}>{isCritical ? '⚠️' : '📈'}</div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+                          {alert.locality_name}, {alert.city_name}
+                        </div>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                          {alert.message}
+                        </div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                          {new Date(alert.timestamp).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Saved Localities */}
         <div>
           <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -79,7 +114,7 @@ export default function DashboardPage() {
                   >
                     ×
                   </button>
-                  <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>{loc.name}</h3>
+                  <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>{loc.name || loc.locality}</h3>
                   <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>{loc.city_name}</div>
                   
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
@@ -89,7 +124,7 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Avg Rent</div>
-                      <div style={{ fontWeight: 600 }}>₹{loc.avg_rent?.toLocaleString('en-IN') || 'N/A'}</div>
+                      <div style={{ fontWeight: 600 }}>₹{(loc.avg_rent || loc.predicted_rent)?.toLocaleString('en-IN') || 'N/A'}</div>
                     </div>
                   </div>
 

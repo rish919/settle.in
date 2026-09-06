@@ -115,7 +115,77 @@ export async function fetchRecommendations(preferences) {
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(preferences)
+    body: JSON.stringify({ profile: preferences })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Fetch historical time-series data for a locality.
+ *
+ * @param {string} cityId
+ * @param {string} localityId
+ * @returns {Promise<Array>}
+ */
+export async function fetchLocalityHistory(cityId, localityId) {
+  const response = await fetch(`${API_BASE}/cities/${cityId}/localities/${localityId}/history`);
+  
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Fetch 12-month ML forecast for a locality.
+ *
+ * @param {string} cityId
+ * @param {string} localityId
+ * @returns {Promise<Array>}
+ */
+export async function fetchLocalityForecast(cityId, localityId) {
+  const response = await fetch(`${API_BASE}/cities/${cityId}/localities/${localityId}/forecast`);
+  
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Check for ML smart alerts on saved localities.
+ * @param {Object} request - { locality_ids: [], max_rent, max_commute_mins }
+ */
+export async function checkSmartAlerts(request) {
+  const response = await fetch(`${API_BASE}/alerts/check`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request)
+  });
+  
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Submit user feedback on a recommendation.
+ * @param {Object} feedback 
+ */
+export async function submitFeedback(feedback) {
+  const response = await fetch(`${API_BASE}/recommend/feedback`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(feedback)
   });
   
   if (!response.ok) {

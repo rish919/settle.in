@@ -90,7 +90,7 @@ export default function CostOfLivingCalculator({ locality }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'var(--danger)' }}></div>
-                <span style={{ fontSize: '0.95rem' }}>Average Rent</span>
+                <span style={{ fontSize: '0.95rem' }}>Average Rent (1BHK)</span>
               </div>
               <span style={{ fontWeight: 600 }}>₹{rent.toLocaleString('en-IN')}</span>
             </div>
