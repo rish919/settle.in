@@ -21,3 +21,12 @@ build/
 .vscode/
 *.swp
 *.swo
+
+# Test files
+test_*.py
+
+# ML models
+*.pkl
+
+# Confidential PDFs
+*.pdf
